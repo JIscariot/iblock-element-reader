@@ -446,31 +446,6 @@ tests/                           unit-тесты (без Bitrix runtime)
 
 ---
 
-## Публикация на Packagist
+## Install
 
-1. Создайте git-репозиторий и запушьте пакет:
-
-```bash
-git add .
-git commit -m "Initial release of jiscariot/iblock-element-reader"
-git remote add origin git@github.com:jiscariot/iblock-element-reader.git
-git push -u origin main
-```
-
-2. Создайте тег релиза:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-3. Зарегистрируйте репозиторий на [packagist.org](https://packagist.org/packages/submit).
-
-4. Локальная проверка перед релизом:
-
-```bash
-composer install
-composer test
-```
-
-Namespace: `IblockElementReader`.
+composer require jiscariot/iblock-element-reader
