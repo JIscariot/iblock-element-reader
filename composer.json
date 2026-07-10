@@ -1,0 +1,41 @@
+{
+    "name": "jiscariot/iblock-element-reader",
+    "description": "Bitrix iblock element reader: load fields and properties from DB with batch resolve pipeline",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "bitrix",
+        "iblock",
+        "catalog",
+        "reader"
+    ],
+    "authors": [
+        {
+            "name": "JIscariot",
+            "homepage": "https://github.com/jiscariot"
+        }
+    ],
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "IblockElementReader\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IblockElementReader\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "minimum-stability": "stable",
+    "config": {
+        "sort-packages": true
+    }
+}
