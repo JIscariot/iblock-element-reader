@@ -8,7 +8,7 @@ Bitrix iblock element reader: загрузка полей и свойств из
 composer require jiscariot/iblock-element-reader
 ```
 
-**Требования:** PHP 8.1+, Bitrix CMS с модулем `iblock` (классы `Bitrix\Iblock\*`, `Bitrix\Main\*`).
+**Требования:** PHP 8.2+, Bitrix CMS с модулем `iblock` (классы `Bitrix\Iblock\*`, `Bitrix\Main\*`).
 
 ```
 IblockElementReader → IblockElementFetcher → ElementLoader → ResolvePipeline → IblockElementCollection

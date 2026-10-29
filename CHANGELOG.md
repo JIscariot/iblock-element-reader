@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Минимальная версия PHP — 8.2 (в коде используются `readonly`-классы, в 8.1 они не поддерживаются).
 - Два резолвера `UserTypePropertyResolver` (без `supports()`) с одинаковым `userType()` в `withResolvers()` теперь дают `LogicException` с именами обоих классов вместо тихой перезаписи.
 - `IblockPropertyDefinitionRepository` больше не `final` — его можно подменить в тестах пайплайна.
 - Свойства `S` и `N` без `USER_TYPE`: `resolved` заполняется всегда, независимо от `.VALUE` и в том числе у вложенных свойств связанных элементов. `S` → `raw` как есть, `N` → `int|float|null`.
