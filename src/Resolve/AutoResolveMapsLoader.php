@@ -12,6 +12,7 @@ use IblockElementReader\Resolve\BuiltIn\EnumerateResolver;
 use IblockElementReader\Resolve\BuiltIn\FileValueResolver;
 use IblockElementReader\Model\Record\IblockElementRecordCollection;
 use IblockElementReader\Model\Record\IblockPropertyDefinitionRecord;
+use IblockElementReader\Repository\SectionRepository;
 
 final class AutoResolveMapsLoader implements AutoResolveMapsLoaderInterface
 {
@@ -20,6 +21,7 @@ final class AutoResolveMapsLoader implements AutoResolveMapsLoaderInterface
         private readonly FileValueResolver $fileValueResolver = new FileValueResolver(),
         private readonly EnumerateResolver $enumerateResolver = new EnumerateResolver(),
         private readonly ElementValueResolver $elementValueResolver = new ElementValueResolver(),
+        private readonly SectionRepository $sectionRepository = new SectionRepository(),
     ) {
     }
 
@@ -38,6 +40,7 @@ final class AutoResolveMapsLoader implements AutoResolveMapsLoaderInterface
         $fileIds = [];
         $enumIds = [];
         $elementIds = [];
+        $sectionIds = [];
 
         foreach ($elements as $element) {
             foreach ($fieldSpecs as $spec) {
@@ -81,6 +84,7 @@ final class AutoResolveMapsLoader implements AutoResolveMapsLoaderInterface
                         PropertyTypeEnum::LIST    => $enumIds[] = $id,
                         PropertyTypeEnum::FILE    => $fileIds[] = $id,
                         PropertyTypeEnum::ELEMENT => $elementIds[] = $id,
+                        PropertyTypeEnum::SECTION => $sectionIds[] = $id,
                         default => null,
                     };
                 }
@@ -91,6 +95,7 @@ final class AutoResolveMapsLoader implements AutoResolveMapsLoaderInterface
             files: $this->fileValueResolver->resolve($fileIds),
             enums: $this->enumerateResolver->resolve($enumIds),
             elements: $this->elementValueResolver->resolve($elementIds, $fieldSpecs),
+            sections: $this->sectionRepository->findByIds($sectionIds),
         );
     }
 }

@@ -149,6 +149,12 @@ foreach ($elements->elements as $element) {
 
 // Enumerate { id, value, xmlId }
 ->withProps(['STATUS.VALUE'])
+
+// id раздела
+->withProps(['SECTION_LINK'])
+
+// Section { id, iblockId, name, code, sort, parentId, isActive }
+->withProps(['SECTION_LINK.VALUE'])
 ```
 
 ---
@@ -214,7 +220,8 @@ foreach ($elements->elements as $element) {
    - `F` → `File`
    - `L` → `Enumerate`
    - `N` → `int` / `float`
-   - `S`, `G` → как есть
+   - `G` → `Section`
+   - `S` → как есть
 
 ### Простые типы S и N
 
@@ -445,6 +452,34 @@ $value->description;
 
 Для свойства типа E с `.VALUE` в `resolved` — вложенный `IblockElement`.
 
+### Section — привязка к разделу (G)
+
+Для свойства типа `G` с `.VALUE` в `resolved` — объект `Section`:
+
+```php
+$elements = (new IblockElementReader())
+    ->filter(iblock: [5])
+    ->withProps(['SECTION_LINK.VALUE'])
+    ->get();
+
+foreach ($elements->elements as $element) {
+    $section = $element->properties['SECTION_LINK']->value->resolved; // Section|null
+
+    $section?->name;      // ?string
+    $section?->code;      // ?string
+    $section?->id;        // int
+    $section?->iblockId;  // int
+    $section?->sort;      // ?int
+    $section?->parentId;  // ?int — IBLOCK_SECTION_ID, null у корневого раздела
+    $section?->isActive;  // ?bool
+}
+```
+
+- Множественное свойство — массив `IblockPropertyValue`, у каждого свой `Section`.
+- Несуществующий или удалённый раздел — `resolved === null`, `raw` (ID) сохраняется.
+- Разделы всех элементов и всех свойств `G` загружаются одним запросом к `SectionTable` на `get()`; один и тот же раздел у разных элементов — один и тот же объект.
+- Свойства `G` с `USER_TYPE`, для которых зарегистрирован кастомный резолвер, резолвит он.
+
 ### IblockElementCollection
 
 ```php
@@ -523,6 +558,7 @@ src/
 │   ├── IblockProperty.php
 │   ├── IblockPropertyValue.php
 │   ├── Enumerate.php            resolved L (список)
+│   ├── Section.php              resolved G (раздел)
 │   ├── File.php                 resolved F (файл)
 │   └── Record/                  сырые данные из БД (load → resolve)
 │       ├── IblockElementRecord.php
@@ -537,7 +573,8 @@ src/
 │   ├── IblockPropertyDefinitionRepository.php
 │   ├── IblockPropertyValueRepository.php
 │   ├── FileRepository.php
-│   └── EnumerateRepository.php
+│   ├── EnumerateRepository.php
+│   └── SectionRepository.php
 └── Resolve/
     ├── Contract/
     │   ├── UserTypePropertyResolver.php

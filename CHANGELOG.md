@@ -7,13 +7,15 @@
 
 ### Added
 
+- Резолвинг свойств типа `G` (привязка к разделу): с `.VALUE` в `resolved` — `Model\Section` (`id`, `iblockId`, `name`, `code`, `sort`, `parentId`, `isActive`); несуществующий раздел → `null`. Разделы загружаются одним запросом к `SectionTable` на `get()` (`Repository\SectionRepository`, карта `AutoResolveMaps::$sections`).
 - `Resolve\Contract\SupportsPropertyResolver` — резолвер с методом `supports(IblockPropertyDefinitionRecord)`: выбор свойств по коду, типу, `LINK_IBLOCK_ID` и другим полям определения, в том числе для свойств без `USER_TYPE`. Проверяется раньше резолверов по `userType()` и встроенных; из нескольких подходящих берётся первый зарегистрированный; `supports()` вызывается один раз на свойство за `get()`.
 
 ### Changed
 
 - Минимальная версия PHP — 8.2 (в коде используются `readonly`-классы, в 8.1 они не поддерживаются).
+- `resolved` у свойств `G` с `.VALUE` — теперь `Section` (или `null`), а не ID раздела. ID по-прежнему в `raw`.
 - Два резолвера `UserTypePropertyResolver` (без `supports()`) с одинаковым `userType()` в `withResolvers()` теперь дают `LogicException` с именами обоих классов вместо тихой перезаписи.
-- `IblockPropertyDefinitionRepository` больше не `final` — его можно подменить в тестах пайплайна.
+- `IblockPropertyDefinitionRepository` и новый `SectionRepository` не `final` — их можно подменить в тестах пайплайна.
 - Свойства `S` и `N` без `USER_TYPE`: `resolved` заполняется всегда, независимо от `.VALUE` и в том числе у вложенных свойств связанных элементов. `S` → `raw` как есть, `N` → `int|float|null`.
 - `NumberValueParser`: обрезает пробелы (включая неразрывные), убирает пробелы-разделители тысяч (`"1 500"` → `1500`), понимает десятичную запятую (`"1,6"` → `1.6`), возвращает `int` для целых значений вида `"15000.0000"`. Нечисловое значение теперь даёт `null`, а не исходную строку.
 - `filter(id: [])` теперь означает пустую выборку: `get()` возвращает пустую коллекцию, `first()` — `null`, запросов к БД нет. Раньше пустой массив снимал фильтр по ID и загружал весь инфоблок, а без `iblock` бросал `IblockScopeException`. Отсутствие фильтра по ID — `id: null` или аргумент не передан.

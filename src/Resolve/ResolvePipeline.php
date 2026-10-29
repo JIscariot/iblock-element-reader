@@ -619,6 +619,7 @@ final class ResolvePipeline
             PropertyTypeEnum::FILE    => $maps->files,
             PropertyTypeEnum::LIST    => $maps->enums,
             PropertyTypeEnum::ELEMENT => $maps->elements,
+            PropertyTypeEnum::SECTION => $maps->sections,
             default => null,
         };
 
