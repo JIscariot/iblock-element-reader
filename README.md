@@ -255,8 +255,32 @@ foreach ($elements->elements as $element) {
 
 | USER_TYPE | Результат |
 |---|---|
-| `Date` | `DateTimeImmutable` (дата, 00:00:00) |
+| `Date` | `DateTimeImmutable`, время всегда `00:00:00` |
 | `DateTime` | `DateTimeImmutable` |
+
+### Даты
+
+`DateTimeValueParser` принимает:
+
+| Значение | Пример |
+|---|---|
+| формат БД | `2024-03-15 14:30:00`, `2024-03-15 14:30`, `2024-03-15`, `2024-03-15T14:30:00` |
+| формат сайта | `15.03.2024 14:30:00`, `15.03.2024 14:30`, `15.03.2024` |
+| объект | `Bitrix\Main\Type\Date`, `Bitrix\Main\Type\DateTime`, `\DateTimeInterface` |
+
+- Строки разбираются в часовом поясе по умолчанию — в Bitrix это пояс сайта; время не сдвигается. Объекты `DateTime` сохраняют своё время и пояс.
+- Пустое или некорректное значение → `null`, без исключений и предупреждений. Некорректное — это и несуществующие даты (`31.02.2024`, `2024-13-01`, `25:00`), и двузначный год, и относительные выражения вроде `tomorrow`.
+
+Даты из обычных строковых свойств (`S` без `USER_TYPE`) можно разобрать тем же кодом:
+
+```php
+use IblockElementReader\Resolve\BuiltIn\DateTimeValueParser;
+
+$raw = $element->properties['DELIVERY_DATE']->value->raw;   // "15.03.2024"
+
+DateTimeValueParser::parseValue($raw);                  // DateTimeImmutable 2024-03-15 00:00:00 или null
+DateTimeValueParser::parseValue($raw, dateOnly: true);  // время обнуляется, как у USER_TYPE Date
+```
 
 ---
 

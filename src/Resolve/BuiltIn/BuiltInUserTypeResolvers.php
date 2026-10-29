@@ -31,7 +31,10 @@ final class BuiltInUserTypeResolvers
                 return [];
             }
 
-            return self::parser()->map($context->uniqueValues);
+            // Date — только дата: время всегда 00:00:00, даже если в БД оно есть
+            $dateOnly = $definition->userType === PropertyUserTypeEnum::DATE->value;
+
+            return self::parser()->map($context->uniqueValues, $dateOnly);
         };
     }
 

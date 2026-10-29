@@ -9,6 +9,7 @@
 
 - Резолвинг свойств типа `G` (привязка к разделу): с `.VALUE` в `resolved` — `Model\Section` (`id`, `iblockId`, `name`, `code`, `sort`, `parentId`, `isActive`); несуществующий раздел → `null`. Разделы загружаются одним запросом к `SectionTable` на `get()` (`Repository\SectionRepository`, карта `AutoResolveMaps::$sections`).
 - `Resolve\Contract\SupportsPropertyResolver` — резолвер с методом `supports(IblockPropertyDefinitionRecord)`: выбор свойств по коду, типу, `LINK_IBLOCK_ID` и другим полям определения, в том числе для свойств без `USER_TYPE`. Проверяется раньше резолверов по `userType()` и встроенных; из нескольких подходящих берётся первый зарегистрированный; `supports()` вызывается один раз на свойство за `get()`.
+- `DateTimeValueParser::parseValue($value, dateOnly: false)` — статический разбор дат для строковых свойств тем же кодом, что и у `Date` / `DateTime`. Принимает форматы БД (`Y-m-d H:i:s`, `Y-m-d H:i`, `Y-m-d`, `Y-m-d\TH:i:s`), сайта (`d.m.Y H:i:s`, `d.m.Y H:i`, `d.m.Y`) и объекты `Bitrix\Main\Type\Date` / `DateTime` / `\DateTimeInterface`.
 
 ### Changed
 
@@ -25,6 +26,8 @@
 - Порядок значений множественных свойств теперь детерминирован — по `ID` значения в БД (`ORDER BY ID` для `b_iblock_element_prop_m*` и `ElementPropertyTable`); раньше порядок зависел от СУБД.
 - `description` заполняется только у свойств с `WITH_DESCRIPTION = Y`, на всех уровнях вложенности; у остальных — `null`.
 - Вложенный пайплайн (связанные элементы `E`) теперь использует тот же загрузчик элементов, репозиторий определений и загрузчик карт, что и корневой, — раньше он всегда создавал свои.
+- `DateTimeValueParser`: несуществующие даты больше не «перетекают» (`31.02.2024` давало 2 марта, `2024-13-01` — 1 января 2025, `25:00` — 01:00 следующего дня), двузначный год не превращается в год 0024, а `now` / `tomorrow` и подобные выражения больше не дают текущую дату — всё это теперь `null`. Убран свободный разбор через `new DateTimeImmutable($string)`.
+- `USER_TYPE` `Date`: время в `resolved` всегда `00:00:00`, даже если в БД значение хранится со временем.
 
 ## [0.1.0] - 2026-10-29
 
