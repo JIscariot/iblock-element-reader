@@ -27,4 +27,15 @@ final readonly class IblockElement
         public array $properties = [],
     ) {
     }
+
+    public function property(string $code): ?IblockProperty
+    {
+        return $this->properties[$code] ?? null;
+    }
+
+    /** resolved первого значения свойства (при null — raw); свойства нет — null. */
+    public function value(string $code): mixed
+    {
+        return $this->property($code)?->resolved();
+    }
 }

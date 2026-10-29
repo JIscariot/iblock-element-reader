@@ -7,6 +7,7 @@
 
 ### Added
 
+- Методы чтения значений, одинаковые для одиночных и множественных свойств: `IblockProperty::values()`, `first()`, `resolved()` (при `null` — `raw`), `resolvedList()` (без `null` и пустых строк), `descriptions()`; `IblockElement::property($code)` и `value($code)`.
 - Резолвинг свойств типа `G` (привязка к разделу): с `.VALUE` в `resolved` — `Model\Section` (`id`, `iblockId`, `name`, `code`, `sort`, `parentId`, `isActive`); несуществующий раздел → `null`. Разделы загружаются одним запросом к `SectionTable` на `get()` (`Repository\SectionRepository`, карта `AutoResolveMaps::$sections`).
 - `Resolve\Contract\SupportsPropertyResolver` — резолвер с методом `supports(IblockPropertyDefinitionRecord)`: выбор свойств по коду, типу, `LINK_IBLOCK_ID` и другим полям определения, в том числе для свойств без `USER_TYPE`. Проверяется раньше резолверов по `userType()` и встроенных; из нескольких подходящих берётся первый зарегистрированный; `supports()` вызывается один раз на свойство за `get()`.
 - `DateTimeValueParser::parseValue($value, dateOnly: false)` — статический разбор дат для строковых свойств тем же кодом, что и у `Date` / `DateTime`. Принимает форматы БД (`Y-m-d H:i:s`, `Y-m-d H:i`, `Y-m-d`, `Y-m-d\TH:i:s`), сайта (`d.m.Y H:i:s`, `d.m.Y H:i`, `d.m.Y`) и объекты `Bitrix\Main\Type\Date` / `DateTime` / `\DateTimeInterface`.

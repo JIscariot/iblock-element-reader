@@ -36,8 +36,9 @@ $elements = (new IblockElementReader())
 foreach ($elements->elements as $element) {
     $element->id;                              // int
     $element->name;                            // string|null
-    $element->properties['MAKE_ID']->value->raw;       // сырое из БД
-    $element->properties['MAKE_ID']->value->resolved;  // после .VALUE или null (у S/N — всегда)
+    $element->value('MAKE_ID');                // resolved первого значения, при null — raw
+    $element->value('PRICE');                  // int|float|null
+    $element->property('VIN')?->first()?->raw; // сырое значение из БД
 }
 
 $elements->elements[0] ?? null; // первый элемент
@@ -276,7 +277,7 @@ foreach ($elements->elements as $element) {
 ```php
 use IblockElementReader\Resolve\BuiltIn\DateTimeValueParser;
 
-$raw = $element->properties['DELIVERY_DATE']->value->raw;   // "15.03.2024"
+$raw = $element->value('DELIVERY_DATE');   // "15.03.2024"
 
 DateTimeValueParser::parseValue($raw);                  // DateTimeImmutable 2024-03-15 00:00:00 или null
 DateTimeValueParser::parseValue($raw, dateOnly: true);  // время обнуляется, как у USER_TYPE Date
@@ -444,10 +445,15 @@ public function userType(): string
 ```php
 ->withProps(['STORE.VALUE.GALLERY.VALUE'])
 
-foreach ($element->properties['STORE']->value->resolved->properties['GALLERY']->value as $photo) {
+$store = $element->property('STORE')?->first()?->resolved;  // ?IblockElement
+$gallery = $store?->property('GALLERY');
+
+foreach ($gallery?->values() ?? [] as $photo) {
     $photo->raw;          // значение
     $photo->description;  // DESCRIPTION; null, если у свойства нет WITH_DESCRIPTION
 }
+
+$gallery?->descriptions();  // ['Вид сзади', 'Вид спереди', …] — в порядке значений
 ```
 
 Значения множественного свойства идут в том порядке, в каком хранятся в БД (по `ID` значения) — и на верхнем уровне, и во вложенных.
@@ -474,6 +480,9 @@ $element->isActive;
 $element->createdAt;       // ?DateTimeInterface
 $element->properties;       // array<string, IblockProperty>  ключ = CODE свойства
                             // все запрошенные свойства, в т.ч. с пустым value => null
+
+$element->property('MAKE_ID');  // ?IblockProperty — null, если свойство не запрашивали
+$element->value('MAKE_ID');     // = property('MAKE_ID')?->resolved()
 ```
 
 ### IblockProperty / IblockPropertyValue
@@ -486,6 +495,31 @@ $value->raw;                 // сырое значение из БД
 $value->resolved;            // после .VALUE или null, если .VALUE не запрашивали; у S/N без USER_TYPE — всегда
 $value->description;
 ```
+
+`$property->value` у одиночного свойства — объект, у множественного — массив. Чтобы не проверять `is_array()`, читайте через методы — они одинаково работают для обоих случаев:
+
+| Метод | Результат | Одиночное `'7'` → `Enumerate` | Множественное `['a', '', 'b']` | Пустое |
+|---|---|---|---|---|
+| `values()` | `list<IblockPropertyValue>` | `[value]` | `[v1, v2, v3]` | `[]` |
+| `first()` | `?IblockPropertyValue` | `value` | `v1` | `null` |
+| `resolved()` | `resolved` первого значения, при `null` — `raw` | `Enumerate` | `'a'` | `null` |
+| `resolvedList()` | `resolved` (при `null` — `raw`) всех значений без `null` и `''` | `[Enumerate]` | `['a', 'b']` | `[]` |
+| `descriptions()` | `list<?string>` в порядке `values()` | `[null]` | `[d1, d2, d3]` | `[]` |
+
+```php
+$element->value('PRICE');                         // 1500
+$element->property('TAGS')?->resolvedList() ?? [];
+$element->property('PHOTOS')?->resolvedList();    // [File, File, …]
+```
+
+`resolved()` и `value()` подставляют `raw`, если `resolved === null`. Для `L`, `F`, `E`, `G` это значит: если enum, файл, связанный элемент или раздел не найден, вернётся его ID, а не `null`. Когда нужен строго объект, читайте `resolved` напрямую:
+
+```php
+$element->property('STATUS')?->first()?->resolved?->value;  // Enumerate|null → 'Новый'
+$element->property('STORE')?->first()?->resolved;           // IblockElement|null
+```
+
+Методы только читают данные. `resolvedList()` отбрасывает пустые значения, а `descriptions()` — нет, поэтому длины списков могут различаться; для пар «значение + описание» используйте `values()`.
 
 Для свойства типа E с `.VALUE` в `resolved` — вложенный `IblockElement`.
 
@@ -500,7 +534,7 @@ $elements = (new IblockElementReader())
     ->get();
 
 foreach ($elements->elements as $element) {
-    $section = $element->properties['SECTION_LINK']->value->resolved; // Section|null
+    $section = $element->property('SECTION_LINK')?->first()?->resolved; // Section|null
 
     $section?->name;      // ?string
     $section?->code;      // ?string
