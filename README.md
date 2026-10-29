@@ -5,7 +5,7 @@ Bitrix iblock element reader: загрузка полей и свойств из
 ## Установка
 
 ```bash
-composer require jiscariot/iblock-element-reader
+composer require jiscariot/iblock-element-reader:^0.2
 ```
 
 **Требования:** PHP 8.2+, Bitrix CMS с модулем `iblock` (классы `Bitrix\Iblock\*`, `Bitrix\Main\*`).
@@ -601,40 +601,113 @@ $elements->elements; // IblockElement[]
 
 ## Полный пример
 
+Каталог автомобилей: марка и модель — свойства одного `USER_TYPE` `DependentSelect` со ссылками на разные справочники, категория — привязка к разделу (`G`), склад — привязка к элементу (`E`) с галереей, у фото есть описания.
+
 ```php
 use IblockElementReader\IblockElementReader;
+use IblockElementReader\Model\IblockElement;
+use IblockElementReader\Model\Record\IblockPropertyDefinitionRecord;
+use IblockElementReader\Model\Section;
+use IblockElementReader\Resolve\Contract\SupportsPropertyResolver;
+use IblockElementReader\Resolve\PropertyResolveContext;
 
-final class BikeCatalogReader
+/** Один класс — два резолвера: каждый выбирает своё свойство по коду. */
+final class DictionaryResolver implements SupportsPropertyResolver
 {
+    /**
+     * @param \Closure(list<mixed>): array<string, string> $load  ID → название, одним запросом
+     */
     public function __construct(
-        private int $bikeIblockId,
-        private DependentSelectPropertyResolver $dependentSelect,
-        private BooleanValuePropertyResolver $booleanValue,
+        private readonly string $code,
+        private readonly \Closure $load,
     ) {
     }
 
-    public function loadPromoted(array $ids): array
+    public function supports(IblockPropertyDefinitionRecord $definition): bool
+    {
+        return $definition->code === $this->code;
+    }
+
+    public function userType(): string
+    {
+        return 'DependentSelect'; // подсказка
+    }
+
+    public function resolve(PropertyResolveContext $context): array
+    {
+        return ($this->load)($context->uniqueValues);
+    }
+}
+
+final class CarCatalogReader
+{
+    public function __construct(
+        private readonly int $carsIblockId,
+        private readonly MakeRepository $makes,
+        private readonly ModelRepository $models,
+    ) {
+    }
+
+    /**
+     * @param int[] $ids  может быть пустым — тогда пустой результат без запросов
+     * @return list<array<string, mixed>>
+     */
+    public function load(array $ids): array
     {
         $elements = (new IblockElementReader())
-            ->filter(id: $ids, iblock: $this->bikeIblockId)
-            ->withFields(['ID', 'NAME', 'CODE', 'PREVIEW_PICTURE.VALUE'])
+            ->filter(id: $ids, iblock: $this->carsIblockId)
+            ->withFields(['NAME', 'CODE', 'PREVIEW_PICTURE.VALUE'])
             ->withProps([
                 'MAKE_ID.VALUE',
                 'MODEL_ID.VALUE',
-                'PRICE.VALUE',
-                'IS_NEW.VALUE',
-                'STORE.VALUE.ADDRESS.VALUE',
+                'CATEGORY.VALUE',               // G → Section
+                'PRICE',                        // N → int|float, и без .VALUE
+                'SOLD_AT.VALUE',                // USER_TYPE Date → DateTimeImmutable
+                'TAGS',                         // множественное S
+                'STORE.VALUE',                  // E → IblockElement
+                'STORE.VALUE.GALLERY.VALUE',    // множественное S с описаниями
             ])
             ->withResolvers([
-                $this->dependentSelect,
-                $this->booleanValue,
+                new DictionaryResolver('MAKE_ID', $this->makes->namesByIds(...)),
+                new DictionaryResolver('MODEL_ID', $this->models->namesByIds(...)),
             ])
             ->get();
 
-        return $elements->elements;
+        return array_map($this->toArray(...), $elements->elements);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function toArray(IblockElement $car): array
+    {
+        $category = $car->property('CATEGORY')?->first()?->resolved;  // Section|null
+        $store = $car->property('STORE')?->first()?->resolved;        // IblockElement|null
+        $gallery = $store?->property('GALLERY');
+
+        return [
+            'id'        => $car->id,
+            'name'      => $car->name,
+            'section'   => $car->iblockSectionId,                     // основной раздел элемента
+            'make'      => $car->value('MAKE_ID'),                    // 'Volkswagen'
+            'model'     => $car->value('MODEL_ID'),                   // 'Golf'
+            'category'  => $category instanceof Section ? $category->name : null,
+            'price'     => $car->value('PRICE'),                      // 1500000
+            'soldAt'    => $car->property('SOLD_AT')?->first()?->resolved?->format('d.m.Y'),
+            'tags'      => $car->property('TAGS')?->resolvedList() ?? [],
+            'store'     => $store?->name,
+            'photos'    => array_map(
+                static fn($photo) => ['src' => $photo->raw, 'title' => $photo->description],
+                $gallery?->values() ?? [],
+            ),
+        ];
     }
 }
 ```
+
+Число запросов не зависит от числа элементов: на каждом уровне (сами автомобили, затем связанные склады) — по одному запросу на тип данных: элементы, значения свойств, разделы, файлы, плюс по одному вызову `resolve()` на каждый справочник.
+
+`value()` подставляет `raw`, если `resolved === null`, поэтому для объектов (`Section`, `IblockElement`, `DateTimeImmutable`) в примере используется `first()?->resolved` — так не найденный раздел или некорректная дата дают `null`, а не исходную строку.
 
 ---
 
@@ -683,4 +756,4 @@ tests/                           unit-тесты (без Bitrix runtime)
 
 ## Install
 
-composer require jiscariot/iblock-element-reader
+composer require jiscariot/iblock-element-reader:^0.2

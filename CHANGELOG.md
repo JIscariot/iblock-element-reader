@@ -7,6 +7,7 @@
 
 ### Added
 
+- README: полный пример с резолвером `supports()`, свойством `G`, вложенными описаниями и методами `property()` / `value()` / `values()`.
 - `IblockElement::$iblockSectionId` — основной раздел элемента (`IBLOCK_SECTION_ID`), в том числе у связанных элементов `E`. Выбирается тем же запросом, что и остальные поля, без `withFields`.
 - Методы чтения значений, одинаковые для одиночных и множественных свойств: `IblockProperty::values()`, `first()`, `resolved()` (при `null` — `raw`), `resolvedList()` (без `null` и пустых строк), `descriptions()`; `IblockElement::property($code)` и `value($code)`.
 - Резолвинг свойств типа `G` (привязка к разделу): с `.VALUE` в `resolved` — `Model\Section` (`id`, `iblockId`, `name`, `code`, `sort`, `parentId`, `isActive`); несуществующий раздел → `null`. Разделы загружаются одним запросом к `SectionTable` на `get()` (`Repository\SectionRepository`, карта `AutoResolveMaps::$sections`).
