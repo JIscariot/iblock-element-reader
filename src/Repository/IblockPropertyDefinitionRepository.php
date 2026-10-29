@@ -7,7 +7,7 @@ namespace IblockElementReader\Repository;
 use Bitrix\Iblock\PropertyTable;
 use IblockElementReader\Model\Record\IblockPropertyDefinitionRecord;
 
-final class IblockPropertyDefinitionRepository
+class IblockPropertyDefinitionRepository
 {
     /**
      * @param string[] $codes  пустой = все свойства инфоблока

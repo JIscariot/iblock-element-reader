@@ -212,7 +212,7 @@ final class ResolvePipeline
         }
 
         $resolved = match (true) {
-            $this->scalarResolver->supports($definition) => $this->scalarResolver->resolve($definition, $raw),
+            $this->isScalar($definition) => $this->scalarResolver->resolve($definition, $raw),
             $autoResolve && $state->hasProp($code) => $this->mapResolved($state->prop($code)),
             default => null,
         };
@@ -235,7 +235,7 @@ final class ResolvePipeline
         IblockPropertyDefinitionRecord $definition,
     ): array {
         $rawItems = $element->properties->all($code);
-        $scalar = $this->scalarResolver->supports($definition);
+        $scalar = $this->isScalar($definition);
         $resolvedList = $autoResolve && $state->hasProp($code)
             ? ($state->prop($code) ?? [])
             : [];
@@ -307,9 +307,19 @@ final class ResolvePipeline
 
     private function mapStateOnlyResolved(IblockPropertyDefinitionRecord $definition, mixed $value): mixed
     {
-        return $this->scalarResolver->supports($definition)
+        return $this->isScalar($definition)
             ? $this->scalarResolver->resolve($definition, $value)
             : $this->mapResolved($value);
+    }
+
+    /**
+     * Простое S/N без USER_TYPE, которое не забрал кастомный резолвер (SupportsPropertyResolver):
+     * resolved заполняется всегда. Если резолвер есть — свойство ведёт себя как USER_TYPE-свойство.
+     */
+    private function isScalar(IblockPropertyDefinitionRecord $definition): bool
+    {
+        return $this->scalarResolver->supports($definition)
+            && !$this->resolverRegistry->has($definition);
     }
 
     private function mapResolved(mixed $value): mixed

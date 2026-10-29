@@ -242,7 +242,7 @@ foreach ($elements->elements as $element) {
 | `"abc"` | `null` |
 | `""` | `null` |
 
-Свойства с `USER_TYPE` (встроенные `Date` / `DateTime`, кастомные из `withResolvers`, любые другие) это правило не затрагивает: для них `resolved` по-прежнему заполняется только с `.VALUE`.
+Свойства с `USER_TYPE` (встроенные `Date` / `DateTime`, кастомные из `withResolvers`, любые другие) и свойства, которые забрал `SupportsPropertyResolver`, это правило не затрагивает: для них `resolved` по-прежнему заполняется только с `.VALUE`.
 
 Встроенные USER_TYPE:
 
@@ -253,9 +253,9 @@ foreach ($elements->elements as $element) {
 
 ---
 
-## withResolvers — кастомные USER_TYPE
+## withResolvers — кастомные резолверы
 
-Для свойств с нестандартным `b_iblock_property.USER_TYPE` (например `DependentSelect`, `booleanValue`) передайте объекты, реализующие интерфейс `UserTypePropertyResolver`.
+Для свойств с нестандартным `b_iblock_property.USER_TYPE` (например `DependentSelect`, `booleanValue`) передайте объекты, реализующие интерфейс `UserTypePropertyResolver`. Если нужно выбирать свойства не только по `USER_TYPE` (по коду, типу, `LINK_IBLOCK_ID`) или резолвить свойства без `USER_TYPE` — реализуйте `SupportsPropertyResolver` (см. [ниже](#supportspropertyresolver--выбор-свойств-по-определению)).
 
 ```php
 use IblockElementReader\Resolve\Contract\UserTypePropertyResolver;
@@ -316,20 +316,76 @@ $elements = (new IblockElementReader())
 
 Кастомный резолвер **переопределяет** встроенный для того же USER_TYPE (например свой `Date` вместо стандартного парсера).
 
-### DependentSelect и несколько свойств одного USER_TYPE
+Два резолвера `UserTypePropertyResolver` с одинаковым `userType()` в одном `withResolvers()` — ошибка: `get()` бросит `LogicException` с именами обоих классов (раньше второй молча заменял первый). Чтобы обрабатывать свойства одного `USER_TYPE` разными резолверами, используйте `SupportsPropertyResolver`.
 
-Один USER_TYPE = один объект-резолвер. Если разные коды свойств (`MAKE_ID`, `MODEL_ID`) используют один `DependentSelect`, внутри `resolve()` разветвляйтесь по `$context->definition->code`:
+### SupportsPropertyResolver — выбор свойств по определению
+
+`SupportsPropertyResolver` расширяет `UserTypePropertyResolver` методом `supports()`. Резолвер сам решает, какие свойства обрабатывает, по любым полям `IblockPropertyDefinitionRecord`: `code`, `type`, `userType`, `linkIblockId`, `multiple`, `withDescription`.
+
+Например, свойства `MAKE_ID` и `MODEL_ID` с одним `USER_TYPE` `DependentSelect` ссылаются на разные справочники — каждому свой резолвер:
 
 ```php
-public function resolve(PropertyResolveContext $context): array
+use IblockElementReader\Model\Record\IblockPropertyDefinitionRecord;
+use IblockElementReader\Resolve\Contract\SupportsPropertyResolver;
+use IblockElementReader\Resolve\PropertyResolveContext;
+
+final class MakePropertyResolver implements SupportsPropertyResolver
 {
-    return match ($context->definition->code) {
-        'MAKE_ID'  => $this->resolveMakes($context->uniqueValues),
-        'MODEL_ID' => $this->resolveModels($context->uniqueValues),
-        default    => [],
-    };
+    public function __construct(private readonly MakeRepository $makes)
+    {
+    }
+
+    public function supports(IblockPropertyDefinitionRecord $definition): bool
+    {
+        return $definition->code === 'MAKE_ID';
+    }
+
+    public function userType(): string
+    {
+        return 'DependentSelect'; // только подсказка
+    }
+
+    public function resolve(PropertyResolveContext $context): array
+    {
+        return $this->makes->namesByIds($context->uniqueValues); // ['10' => 'Volkswagen', ...]
+    }
+}
+
+$elements = (new IblockElementReader())
+    ->filter(iblock: [5])
+    ->withProps(['MAKE_ID.VALUE', 'MODEL_ID.VALUE'])
+    ->withResolvers([
+        new MakePropertyResolver($makeRepo),
+        new ModelPropertyResolver($modelRepo), // supports(): code === 'MODEL_ID'
+    ])
+    ->get();
+```
+
+Свойство без `USER_TYPE` тоже можно забрать своим резолвером — например, привязку `E` к справочнику, который не нужно загружать как `IblockElement`:
+
+```php
+public function supports(IblockPropertyDefinitionRecord $definition): bool
+{
+    return $definition->type === PropertyTypeEnum::ELEMENT && $definition->linkIblockId === 12;
+}
+
+public function userType(): string
+{
+    return ''; // свойство без USER_TYPE
 }
 ```
+
+Порядок выбора резолвера для свойства:
+
+1. первый `SupportsPropertyResolver` в порядке регистрации, у которого `supports()` вернул `true`;
+2. `UserTypePropertyResolver` по `userType()`;
+3. встроенные (`Date`, `DateTime`);
+4. ничего не подошло — авто-резолв по типу свойства (`E`, `F`, `L`, `N`, …).
+
+- `supports()` вызывается один раз на свойство за `get()`, а не на каждое значение.
+- `userType()` у `SupportsPropertyResolver` — только подсказка; пустая строка допустима. Проверка на дубликаты `userType()` к таким резолверам не применяется.
+- Резолвер, как и раньше, срабатывает только для свойств с `.VALUE`. Если он забрал простое `S` / `N` без `USER_TYPE`, правило «`resolved` всегда» для этого свойства не действует: без `.VALUE` `resolved === null`.
+- Если резолвер забрал свойство `E`, связанный элемент не загружается, и вложенные пути (`STORE.VALUE.ADDRESS.VALUE`) для этого свойства не применяются.
 
 ---
 
@@ -484,7 +540,8 @@ src/
 │   └── EnumerateRepository.php
 └── Resolve/
     ├── Contract/
-    │   └── UserTypePropertyResolver.php
+    │   ├── UserTypePropertyResolver.php
+    │   └── SupportsPropertyResolver.php
     ├── LinkedElementCache.php   flyweight linked E на один get()
     ├── PropertyResolverRegistry.php
     ├── ResolvePipeline.php      resolve + сборка IblockElement
