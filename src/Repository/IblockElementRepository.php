@@ -6,7 +6,7 @@ namespace IblockElementReader\Repository;
 
 use Bitrix\Iblock\ElementTable;
 
-final class IblockElementRepository
+class IblockElementRepository
 {
     /**
      * @param int[] $iblockIds  пустой = без фильтра IBLOCK_ID

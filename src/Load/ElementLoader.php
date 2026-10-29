@@ -38,8 +38,11 @@ final class ElementLoader implements ElementLoaderInterface
 
         $fieldSpecs = $this->fieldSpecParser->parse($fields);
         $select = $this->fieldSpecParser->selectNames($fieldSpecs);
-        if (!in_array('IBLOCK_ID', $select, true)) {
-            $select[] = 'IBLOCK_ID';
+        // служебные поля: выбираются всегда, тем же запросом
+        foreach (['IBLOCK_ID', 'IBLOCK_SECTION_ID'] as $serviceField) {
+            if (!in_array($serviceField, $select, true)) {
+                $select[] = $serviceField;
+            }
         }
 
         $baseRows = $this->elementRepository->findByFilter($iblockIds, $ids, $select);
@@ -80,10 +83,18 @@ final class ElementLoader implements ElementLoaderInterface
                 iblockId: $iblockId,
                 fields: $fieldData,
                 properties: new IblockPropertyValueRecordCollection(...$propertyValues),
+                iblockSectionId: self::sectionId($row['IBLOCK_SECTION_ID'] ?? null),
             );
         }
 
         return new IblockElementRecordCollection(...$elements);
+    }
+
+    private static function sectionId(mixed $value): ?int
+    {
+        $id = is_numeric($value) ? (int)$value : 0;
+
+        return $id > 0 ? $id : null;
     }
 
     /**

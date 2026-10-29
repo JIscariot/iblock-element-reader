@@ -478,11 +478,32 @@ $element->previewPicture;   // null|int|File — int без .VALUE, File с PREV
 $element->detailPicture;    // null|int|File
 $element->isActive;
 $element->createdAt;       // ?DateTimeInterface
+$element->iblockSectionId;  // ?int — основной раздел (IBLOCK_SECTION_ID), null — без раздела
 $element->properties;       // array<string, IblockProperty>  ключ = CODE свойства
                             // все запрошенные свойства, в т.ч. с пустым value => null
 
 $element->property('MAKE_ID');  // ?IblockProperty — null, если свойство не запрашивали
 $element->value('MAKE_ID');     // = property('MAKE_ID')?->resolved()
+```
+
+### Раздел элемента
+
+`iblockSectionId` заполняется всегда — `IBLOCK_SECTION_ID` выбирается тем же запросом, что и остальные поля, даже без `withFields`. Это **основной** раздел: если элемент привязан к нескольким разделам, здесь будет тот, что указан основным. У элементов, загруженных через свойство `E`, поле тоже заполнено:
+
+```php
+$store = $element->property('STORE')?->first()?->resolved;  // ?IblockElement
+$store?->iblockSectionId;                                   // раздел связанного элемента
+```
+
+Загрузить сам раздел (`Section`) путём в `withProps` пока нельзя — это возможное развитие: например, служебный путь вида `STORE.VALUE.IBLOCK_SECTION_ID.VALUE`, который предзагружал бы разделы связанных элементов тем же batch-запросом, что и для свойств `G`. Сейчас разделы нескольких элементов можно получить одним запросом так:
+
+```php
+use IblockElementReader\Repository\SectionRepository;
+
+$sectionIds = array_map(static fn($e) => $e->iblockSectionId, $elements->elements);
+$sections = (new SectionRepository())->findByIds($sectionIds);  // array<int, Section>, один запрос
+
+$sections[$element->iblockSectionId ?? 0] ?? null;
 ```
 
 ### IblockProperty / IblockPropertyValue

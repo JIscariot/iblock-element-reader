@@ -12,12 +12,14 @@ final readonly class IblockElementRecord
 {
     /**
      * @param array<string, mixed> $fields  родные поля (ID, NAME, PREVIEW_PICTURE, …)
+     * @param int|null $iblockSectionId  основной раздел (IBLOCK_SECTION_ID), null — без раздела
      */
     public function __construct(
         public int $id,
         public int $iblockId,
         public array $fields,
         public IblockPropertyValueRecordCollection $properties,
+        public ?int $iblockSectionId = null,
     ) {
     }
 

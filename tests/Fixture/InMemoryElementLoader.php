@@ -55,6 +55,7 @@ final class InMemoryElementLoader implements ElementLoaderInterface
                 iblockId: $record->iblockId,
                 fields: $record->fields,
                 properties: new IblockPropertyValueRecordCollection(...$values),
+                iblockSectionId: $record->iblockSectionId,
             );
         }
 

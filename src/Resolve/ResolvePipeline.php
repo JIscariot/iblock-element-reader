@@ -164,6 +164,7 @@ final class ResolvePipeline
             activeFromAt: $this->dateField($fieldSource, 'ACTIVE_FROM'),
             activeToAt: $this->dateField($fieldSource, 'ACTIVE_TO'),
             properties: $this->mapProperties($state, $element, $autoResolveByCode, $definitionsByIblock),
+            iblockSectionId: $element?->iblockSectionId,
         );
     }
 

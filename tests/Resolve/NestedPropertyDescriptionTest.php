@@ -116,6 +116,41 @@ final class NestedPropertyDescriptionTest extends TestCase
         }
     }
 
+    public function testLinkedElementHasSectionId(): void
+    {
+        $this->loader = new InMemoryElementLoader(
+            new IblockElementRecord(
+                id: 100,
+                iblockId: self::LINK_IBLOCK,
+                fields: [],
+                properties: new IblockPropertyValueRecordCollection(),
+                iblockSectionId: 33,
+            ),
+            new IblockElementRecord(
+                id: 101,
+                iblockId: self::LINK_IBLOCK,
+                fields: [],
+                properties: new IblockPropertyValueRecordCollection(),
+            ),
+        );
+
+        $records = new IblockElementRecordCollection(
+            $this->record(10, self::IBLOCK, [[$this->link, '100', null]]),
+            $this->record(11, self::IBLOCK, [[$this->link, '101', null]]),
+        );
+
+        [$inSection, $withoutSection] = $this->pipeline()->resolve(
+            elements: $records,
+            order: [10, 11],
+            fields: null,
+            props: ['LINK.VALUE'],
+        )->elements;
+
+        self::assertSame(33, $inSection->property('LINK')->first()->resolved->iblockSectionId);
+        self::assertNull($withoutSection->property('LINK')->first()->resolved->iblockSectionId);
+        self::assertCount(1, $this->loader->calls, 'оба связанных элемента — одним запросом');
+    }
+
     public function testTopLevelPropertiesFollowTheSameRules(): void
     {
         $element = $this->pipeline()->resolve(

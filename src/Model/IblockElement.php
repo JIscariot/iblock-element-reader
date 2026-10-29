@@ -8,6 +8,7 @@ final readonly class IblockElement
 {
     /**
      * @param array<string, IblockProperty> $properties
+     * @param int|null $iblockSectionId  основной раздел элемента (IBLOCK_SECTION_ID), null — без раздела
      */
     public function __construct(
         public int $id,
@@ -25,6 +26,7 @@ final readonly class IblockElement
         public ?\DateTimeInterface $activeFromAt = null,
         public ?\DateTimeInterface $activeToAt = null,
         public array $properties = [],
+        public ?int $iblockSectionId = null,
     ) {
     }
 
