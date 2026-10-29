@@ -15,7 +15,12 @@ final class IblockElementReader
     private ?array $fields = null;
     private ?array $props = null;
     private array $iblockIds = [];
-    private array $elementIds = [];
+    /**
+     * null — фильтра по ID нет; [] — заведомо пустая выборка.
+     *
+     * @var int[]|null
+     */
+    private ?array $elementIds = null;
     private array $resolvers = [];
 
     public function __construct(
@@ -64,11 +69,15 @@ final class IblockElementReader
 
     public function get(): IblockElementCollection
     {
+        if ($this->isEmptySelection()) {
+            return new IblockElementCollection([]);
+        }
+
         $this->assertScopeDefined();
 
         $collection = $this->fetcher->fetch(
             iblockIds: $this->iblockIds,
-            elementIds: $this->elementIds,
+            elementIds: $this->elementIds ?? [],
             resolvers: $this->resolvers,
             fields: $this->fields,
             props: $this->props,
@@ -84,9 +93,18 @@ final class IblockElementReader
         return $this->get()->elements[0] ?? null;
     }
 
+    /**
+     * filter(id: []) — пустой список ID: результат пустой, запросов к БД нет.
+     * Сюда же попадает список, в котором после нормализации не осталось валидных ID (например, [0]).
+     */
+    private function isEmptySelection(): bool
+    {
+        return $this->elementIds === [];
+    }
+
     private function assertScopeDefined(): void
     {
-        if ($this->iblockIds === [] && $this->elementIds === []) {
+        if ($this->iblockIds === [] && $this->elementIds === null) {
             throw new IblockScopeException(
                 'Specify filter(id: ...) or filter(iblock: ...) before get().',
             );
