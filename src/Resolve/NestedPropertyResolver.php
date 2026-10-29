@@ -6,6 +6,9 @@ namespace IblockElementReader\Resolve;
 
 use IblockElementReader\Model\IblockElement;
 use IblockElementReader\Load\ElementLoader;
+use IblockElementReader\Load\ElementLoaderInterface;
+use IblockElementReader\Repository\IblockPropertyDefinitionRepository;
+use IblockElementReader\Resolve\Contract\AutoResolveMapsLoaderInterface;
 use IblockElementReader\Normalizer\IdsNormalizer;
 
 /**
@@ -16,7 +19,9 @@ final class NestedPropertyResolver
     public function __construct(
         private readonly PropertyResolverRegistry $resolverRegistry = new PropertyResolverRegistry(),
         private readonly LinkedElementCache $linkedElementCache = new LinkedElementCache(),
-        private readonly ElementLoader $elementLoader = new ElementLoader(),
+        private readonly ElementLoaderInterface $elementLoader = new ElementLoader(),
+        private readonly IblockPropertyDefinitionRepository $propertyDefinitionRepository = new IblockPropertyDefinitionRepository(),
+        private readonly ?AutoResolveMapsLoaderInterface $mapsLoader = null,
     ) {
     }
 
@@ -86,6 +91,9 @@ final class NestedPropertyResolver
         $collection = (new ResolvePipeline(
             resolverRegistry: $this->resolverRegistry,
             linkedElementCache: $this->linkedElementCache,
+            mapsLoader: $this->mapsLoader,
+            propertyDefinitionRepository: $this->propertyDefinitionRepository,
+            elementLoader: $this->elementLoader,
         ))->resolve(
             elements: $elements,
             order: $elementIds,

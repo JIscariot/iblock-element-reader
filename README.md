@@ -415,6 +415,19 @@ public function userType(): string
 
 Повторные ссылки на один и тот же элемент кешируются (`LinkedElementCache`).
 
+Описания значений (`WITH_DESCRIPTION = Y`) у вложенных свойств работают так же, как у свойств самого элемента:
+
+```php
+->withProps(['STORE.VALUE.GALLERY.VALUE'])
+
+foreach ($element->properties['STORE']->value->resolved->properties['GALLERY']->value as $photo) {
+    $photo->raw;          // значение
+    $photo->description;  // DESCRIPTION; null, если у свойства нет WITH_DESCRIPTION
+}
+```
+
+Значения множественного свойства идут в том порядке, в каком хранятся в БД (по `ID` значения) — и на верхнем уровне, и во вложенных.
+
 ---
 
 ## Результат

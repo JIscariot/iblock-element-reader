@@ -6,6 +6,8 @@ namespace IblockElementReader\Resolve;
 
 use IblockElementReader\Enum\PropertyTypeEnum;
 use IblockElementReader\Load\FieldSpec;
+use IblockElementReader\Load\ElementLoader;
+use IblockElementReader\Load\ElementLoaderInterface;
 use IblockElementReader\Load\FieldSpecParser;
 use IblockElementReader\Load\NestedDefinitionLoader;
 use IblockElementReader\Resolve\Contract\AutoResolveMapsLoaderInterface;
@@ -32,6 +34,7 @@ final class ResolvePipeline
         private readonly ?AutoResolveMapsLoaderInterface $mapsLoader = null,
         private readonly IblockPropertyDefinitionRepository $propertyDefinitionRepository = new IblockPropertyDefinitionRepository(),
         private readonly ScalarValueResolver $scalarResolver = new ScalarValueResolver(),
+        private readonly ElementLoaderInterface $elementLoader = new ElementLoader(),
     ) {
     }
 
@@ -220,7 +223,7 @@ final class ResolvePipeline
         return new IblockPropertyValue(
             raw: $raw,
             resolved: $resolved,
-            description: $element->properties->first($code)?->description,
+            description: $this->description($definition, $element->properties->first($code)?->description),
         );
     }
 
@@ -267,7 +270,7 @@ final class ResolvePipeline
                     $autoResolve => $this->mapResolved($resolvedList[$index] ?? null),
                     default => null,
                 },
-                description: $rawItem->description,
+                description: $this->description($definition, $rawItem->description),
             );
         }
 
@@ -316,6 +319,16 @@ final class ResolvePipeline
      * Простое S/N без USER_TYPE, которое не забрал кастомный резолвер (SupportsPropertyResolver):
      * resolved заполняется всегда. Если резолвер есть — свойство ведёт себя как USER_TYPE-свойство.
      */
+    /** DESCRIPTION — только у свойств с WITH_DESCRIPTION = Y. */
+    private function description(IblockPropertyDefinitionRecord $definition, mixed $description): ?string
+    {
+        if (!$definition->withDescription || $description === null) {
+            return null;
+        }
+
+        return (string)$description;
+    }
+
     private function isScalar(IblockPropertyDefinitionRecord $definition): bool
     {
         return $this->scalarResolver->supports($definition)
@@ -531,7 +544,7 @@ final class ResolvePipeline
             $definitionsByCode = $this->propertyDefinitionRepository->indexByCode($definitionsById);
             $definitionsByIblock[$iblockId] = $definitionsByCode;
 
-            foreach ((new NestedDefinitionLoader())->load($propSpecs, $definitionsByCode) as $linkIblockId => $definitions) {
+            foreach ((new NestedDefinitionLoader($this->propertyDefinitionRepository))->load($propSpecs, $definitionsByCode) as $linkIblockId => $definitions) {
                 $definitionsByIblock[$linkIblockId] = array_merge(
                     $definitionsByIblock[$linkIblockId] ?? [],
                     $definitions,
@@ -657,8 +670,11 @@ final class ResolvePipeline
         }
 
         $nestedResolver = new NestedPropertyResolver(
-            $this->resolverRegistry,
-            $this->linkedElementCache,
+            resolverRegistry: $this->resolverRegistry,
+            linkedElementCache: $this->linkedElementCache,
+            elementLoader: $this->elementLoader,
+            propertyDefinitionRepository: $this->propertyDefinitionRepository,
+            mapsLoader: $this->mapsLoader,
         );
         $nestedElements = $nestedResolver->resolve(
             linkIblockId: $linkIblockId,

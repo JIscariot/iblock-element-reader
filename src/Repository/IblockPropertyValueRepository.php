@@ -52,6 +52,8 @@ final class IblockPropertyValueRepository
                 '=IBLOCK_ELEMENT_ID'  => $elementIds,
                 '=IBLOCK_PROPERTY_ID' => array_keys($definitions),
             ],
+            // порядок значений множественного свойства — как в БД (по ID значения)
+            'order' => ['ID' => 'ASC'],
         ])->fetchAll();
 
         $map = [];
@@ -161,7 +163,8 @@ final class IblockPropertyValueRepository
             "SELECT IBLOCK_ELEMENT_ID, IBLOCK_PROPERTY_ID, VALUE, DESCRIPTION
              FROM {$table}
              WHERE IBLOCK_ELEMENT_ID IN ({$idsSql})
-               AND IBLOCK_PROPERTY_ID IN ({$propIdsSql})"
+               AND IBLOCK_PROPERTY_ID IN ({$propIdsSql})
+             ORDER BY ID"
         )->fetchAll();
 
         foreach ($rows as $row) {

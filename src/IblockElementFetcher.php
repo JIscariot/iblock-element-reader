@@ -44,7 +44,9 @@ final class IblockElementFetcher
         $order = $elementIds !== [] ? $elementIds : $elements->ids();
 
         return (new ResolvePipeline(
-            resolverRegistry: new PropertyResolverRegistry($resolvers), linkedElementCache: new LinkedElementCache(),
+            resolverRegistry: new PropertyResolverRegistry($resolvers),
+            linkedElementCache: new LinkedElementCache(),
+            elementLoader: $this->loader,
         ))->resolve(
             elements: $elements,
             order: $order,
