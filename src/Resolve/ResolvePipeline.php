@@ -18,6 +18,7 @@ use IblockElementReader\Model\Record\IblockElementRecord;
 use IblockElementReader\Model\Record\IblockElementRecordCollection;
 use IblockElementReader\Model\File;
 use IblockElementReader\Model\Record\IblockPropertyDefinitionRecord;
+use IblockElementReader\Resolve\BuiltIn\ScalarValueResolver;
 
 final class ResolvePipeline
 {
@@ -30,6 +31,7 @@ final class ResolvePipeline
         private readonly LinkedElementCache $linkedElementCache = new LinkedElementCache(),
         private readonly ?AutoResolveMapsLoaderInterface $mapsLoader = null,
         private readonly IblockPropertyDefinitionRepository $propertyDefinitionRepository = new IblockPropertyDefinitionRepository(),
+        private readonly ScalarValueResolver $scalarResolver = new ScalarValueResolver(),
     ) {
     }
 
@@ -201,7 +203,7 @@ final class ResolvePipeline
         }
 
         if ($definition->multiple) {
-            return $this->mapMultiplePropertyValue($code, $state, $element, $autoResolve);
+            return $this->mapMultiplePropertyValue($code, $state, $element, $autoResolve, $definition);
         }
 
         $raw = $element->properties->rawValue($code);
@@ -209,9 +211,11 @@ final class ResolvePipeline
             return null;
         }
 
-        $resolved = $autoResolve && $state->hasProp($code)
-            ? $this->mapResolved($state->prop($code))
-            : null;
+        $resolved = match (true) {
+            $this->scalarResolver->supports($definition) => $this->scalarResolver->resolve($definition, $raw),
+            $autoResolve && $state->hasProp($code) => $this->mapResolved($state->prop($code)),
+            default => null,
+        };
 
         return new IblockPropertyValue(
             raw: $raw,
@@ -228,8 +232,10 @@ final class ResolvePipeline
         ResolvedElementState $state,
         IblockElementRecord $element,
         bool $autoResolve,
+        IblockPropertyDefinitionRecord $definition,
     ): array {
         $rawItems = $element->properties->all($code);
+        $scalar = $this->scalarResolver->supports($definition);
         $resolvedList = $autoResolve && $state->hasProp($code)
             ? ($state->prop($code) ?? [])
             : [];
@@ -256,9 +262,11 @@ final class ResolvePipeline
         foreach ($rawItems as $index => $rawItem) {
             $values[] = new IblockPropertyValue(
                 raw: $rawItem->value,
-                resolved: $autoResolve
-                    ? $this->mapResolved($resolvedList[$index] ?? null)
-                    : null,
+                resolved: match (true) {
+                    $scalar => $this->scalarResolver->resolve($definition, $rawItem->value),
+                    $autoResolve => $this->mapResolved($resolvedList[$index] ?? null),
+                    default => null,
+                },
                 description: $rawItem->description,
             );
         }
@@ -285,7 +293,7 @@ final class ResolvePipeline
             return array_map(
                 fn(mixed $value): IblockPropertyValue => new IblockPropertyValue(
                     raw: null,
-                    resolved: $this->mapResolved($value),
+                    resolved: $this->mapStateOnlyResolved($definition, $value),
                 ),
                 $resolvedValue,
             );
@@ -293,8 +301,15 @@ final class ResolvePipeline
 
         return new IblockPropertyValue(
             raw: null,
-            resolved: $this->mapResolved($resolvedValue),
+            resolved: $this->mapStateOnlyResolved($definition, $resolvedValue),
         );
+    }
+
+    private function mapStateOnlyResolved(IblockPropertyDefinitionRecord $definition, mixed $value): mixed
+    {
+        return $this->scalarResolver->supports($definition)
+            ? $this->scalarResolver->resolve($definition, $value)
+            : $this->mapResolved($value);
     }
 
     private function mapResolved(mixed $value): mixed

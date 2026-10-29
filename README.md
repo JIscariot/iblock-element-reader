@@ -37,7 +37,7 @@ foreach ($elements->elements as $element) {
     $element->id;                              // int
     $element->name;                            // string|null
     $element->properties['MAKE_ID']->value->raw;       // сырое из БД
-    $element->properties['MAKE_ID']->value->resolved;  // после .VALUE или null
+    $element->properties['MAKE_ID']->value->resolved;  // после .VALUE или null (у S/N — всегда)
 }
 
 $elements->elements[0] ?? null; // первый элемент
@@ -127,6 +127,8 @@ foreach ($elements->elements as $element) {
 | **withFields** | сырое значение (id файла, строка) | `File` для `PREVIEW_PICTURE` / `DETAIL_PICTURE` |
 | **withProps** | сырое значение из `prop_s` | авто-резолв по типу свойства |
 
+Исключение — простые `S` и `N` без `USER_TYPE`: у них `resolved` заполнен всегда, с `.VALUE` и без (см. [Простые типы S и N](#простые-типы-s-и-n)).
+
 Примеры:
 
 ```php
@@ -213,6 +215,34 @@ foreach ($elements->elements as $element) {
    - `L` → `Enumerate`
    - `N` → `int` / `float`
    - `S`, `G` → как есть
+
+### Простые типы S и N
+
+Для свойств `S` и `N` **без `USER_TYPE`** `resolved` заполняется всегда — независимо от `.VALUE`, `*` / `*.VALUE` и того, на каком уровне вложенности загружено свойство (в том числе у связанных элементов `E`). Писать `resolved ?? raw` не нужно.
+
+| Тип | `resolved` |
+|---|---|
+| `S` | `raw` как есть |
+| `N` | `int` / `float` / `null` через `NumberValueParser` |
+
+`NumberValueParser`:
+
+- обрезает пробелы по краям, включая неразрывные;
+- убирает пробелы-разделители тысяч: `"1 500"` → `1500`;
+- заменяет десятичную запятую точкой: `"1,6"` → `1.6`;
+- целое → `int` (в том числе `"15000.0000"` из числовых колонок), дробное → `float`;
+- пустое или нечисловое значение → `null`, без исключений и предупреждений.
+
+| `raw` | `resolved` |
+|---|---|
+| `"1,6"` | `1.6` |
+| `"1 500"` | `1500` |
+| `" 42 "` | `42` |
+| `"0"` | `0` |
+| `"abc"` | `null` |
+| `""` | `null` |
+
+Свойства с `USER_TYPE` (встроенные `Date` / `DateTime`, кастомные из `withResolvers`, любые другие) это правило не затрагивает: для них `resolved` по-прежнему заполняется только с `.VALUE`.
 
 Встроенные USER_TYPE:
 
@@ -353,7 +383,7 @@ $property->definition;     // IblockPropertyDefinitionRecord
 $property->value;            // IblockPropertyValue | IblockPropertyValue[] | null
 
 $value->raw;                 // сырое значение из БД
-$value->resolved;            // после .VALUE или null, если .VALUE не запрашивали
+$value->resolved;            // после .VALUE или null, если .VALUE не запрашивали; у S/N без USER_TYPE — всегда
 $value->description;
 ```
 
