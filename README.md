@@ -5,7 +5,7 @@ Bitrix iblock element reader: загрузка полей и свойств из
 ## Установка
 
 ```bash
-composer require jiscariot/iblock-element-reader:^0.2
+composer require jiscariot/iblock-element-reader:^0.3
 ```
 
 **Требования:** PHP 8.2+, Bitrix CMS с модулем `iblock` (классы `Bitrix\Iblock\*`, `Bitrix\Main\*`).
@@ -756,4 +756,4 @@ tests/                           unit-тесты (без Bitrix runtime)
 
 ## Install
 
-composer require jiscariot/iblock-element-reader:^0.2
+composer require jiscariot/iblock-element-reader:^0.3
