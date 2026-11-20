@@ -136,7 +136,7 @@ foreach ($elements->elements as $element) {
 // id файла
 ->withFields(['PREVIEW_PICTURE'])
 
-// объект File { id, subdir, filename, src, size, width, height }
+// объект File { id, subdir, filename, src, size, width, height, handlerId }
 ->withFields(['PREVIEW_PICTURE.VALUE'])
 
 // id связанного элемента

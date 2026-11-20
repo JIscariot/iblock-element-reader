@@ -21,7 +21,7 @@ final class FileRepository
         }
 
         $rows = FileTable::getList([
-            'select' => ['ID', 'SUBDIR', 'FILE_NAME', 'FILE_SIZE', 'WIDTH', 'HEIGHT'],
+            'select' => ['ID', 'SUBDIR', 'FILE_NAME', 'FILE_SIZE', 'WIDTH', 'HEIGHT', 'HANDLER_ID'],
             'filter' => ['=ID' => $ids],
         ])->fetchAll();
 

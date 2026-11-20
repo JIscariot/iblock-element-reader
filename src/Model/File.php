@@ -14,6 +14,7 @@ final readonly class File
         public int $size,
         public ?int $width = null,
         public ?int $height = null,
+        public ?int $handlerId = null,
     ) {
     }
 }

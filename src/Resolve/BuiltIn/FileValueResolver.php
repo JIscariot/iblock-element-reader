@@ -30,6 +30,9 @@ final class FileValueResolver
                 size: (int)$row['FILE_SIZE'],
                 width: isset($row['WIDTH']) ? (int)$row['WIDTH'] : null,
                 height: isset($row['HEIGHT']) ? (int)$row['HEIGHT'] : null,
+                handlerId: isset($row['HANDLER_ID']) && $row['HANDLER_ID'] !== ''
+                    ? (int)$row['HANDLER_ID']
+                    : null,
             );
         }
 
